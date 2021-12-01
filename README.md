@@ -20,7 +20,7 @@ unzip libtorch-cxx11-abi-shared-with-deps-1.8.2%2Bcpu.zip
 ```bash
 cd learn
 source setup.sh
-cp limit ../model/ext-cpp
+cp limit ../../model/ext-cpp
 ```
 
 
