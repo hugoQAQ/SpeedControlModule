@@ -1,0 +1,153 @@
+@cpp(src="ext-cpp/utilities.cpp",include="utilities.hpp")
+package learn
+ extern function int deepLearn(int)
+ extern function int const_getFileNum()
+ extern function printf(string, int)
+ extern function printf(string)
+
+ port type intPort (int d)   
+ port type silent ()
+
+
+ connector type intConnector (intPort p1, intPort p2)
+	define p1  p2
+	on p1 p2 down {p2.d = p1.d;}
+ end
+
+ connector type silentConnector (silent p1, silent p2)
+	define p1 p2
+ end
+ 
+ atom type Environment ()
+ 	data int i = 1
+ 	export port intPort send_F(i)
+ 	port silent get_F()
+ 	
+ 	place S1, S2
+ 	initial to S1
+ 	on get_F from S1 to S2 
+ 	on send_F from S2 to S1 provided (i<=const_getFileNum()) do {i = i + 1;}
+ end
+ 
+ atom type Camera ()
+ 	data int time = 0
+ 	data int i 
+ 	export port intPort get_F(i)
+ 	export port intPort send_F(i)
+ 	port silent tick()
+ 	
+ 	place S1, S2, S3
+ 	initial to S1
+ 	on tick from S1 to S1 do {time = time + 1;}
+ 	internal from S1 to S2 provided (time == 10) do {time = 0;}
+ 	on get_F from S2 to S3
+ 	on send_F from S3 to S1
+ end
+ 
+ atom type Perception ()
+ 	data int i
+ 	data int result
+ 	export port intPort get_F(i)
+ 	export port intPort send_R(result)
+ 	port silent port01()
+ 	
+ 	place S1, S2, S3
+ 	initial to S1 
+ 	on get_F from S1 to S2
+ 	on port01 from S2 to S3 do {printf("\n===========================================================\n==============    Speed Limit Recognition     =============\n===========================================================\n"); result = deepLearn(i);
+ 	}
+ 	on send_R from S3 to S1
+ end
+ 
+ atom type Controller ()
+ 	data int speed
+ 	data int result
+ 	data int deltaV
+ 	export port intPort get_R(result)
+ 	export port intPort get_speed(speed)
+ 	export port intPort brake(deltaV)
+ 	export port intPort throttle(deltaV)
+ 	port silent port01()
+ 	
+ 	
+ 	place S1, S2, S3, S4, S5, S6
+ 	initial to S1
+ 	on get_R from S1 to S2 
+ 	on get_speed from S2 to S3 provided (result>0)
+ 		do {
+ 	printf("\n\033[30;47m Current speed: %d km/h\033[0m\n", speed);
+ 	printf("\033[01;33m Speed limit: %d km/h\033[0m\n", result); deltaV = result-speed;}
+ 	on brake from S3 to S4 provided (deltaV<0)
+ 		do {printf("\033[01;31m Depress brake!\033[0m\n");}
+ 	on throttle from S3 to S5 provided (deltaV>=0)
+ 		do {printf("\033[01;32m Depress throttle!\033[0m\n"); }
+	on port01 from S2 to S6 provided (result==0)
+		do {printf("\n\033[30;41m Speed limit recognition failed!\033[0m\n");}
+	on get_speed from S6 to S1 
+		do {printf("\n\033[30;47m Current speed: %d km/h\033[0m\n", speed);}
+ 	on port01 from S4 to S1
+ 	on port01 from S5 to S1
+ end
+ 	
+ atom type SpeedSensor()
+ 	data int speed = 70
+ 	data int deltaV
+ 	export port intPort get_speed(speed)
+ 	export port intPort set_speed(deltaV)
+ 	
+ 	place S1 
+ 	initial to S1
+ 	on get_speed from S1 to S1
+ 	on set_speed from S1 to S1 do { speed = speed + deltaV; }
+ end
+ 
+ atom type Brake ()
+ 	data int speed
+ 	data int deltaV
+ 	export port intPort brake(deltaV)
+ 	export port intPort set_speed(deltaV)
+ 	
+ 	place S1, S2
+ 	initial to S1
+ 	on brake from S1 to S2
+ 	on set_speed from S2 to S1
+ end
+ 
+ atom type Throttle ()
+ 	data int speed
+ 	data int deltaV
+  	export port intPort throttle(deltaV)
+	export port intPort set_speed(deltaV)
+
+ 	place S1, S2
+ 	initial to S1
+ 	on throttle from S1 to S2
+ 	on set_speed from S2 to S1 
+ end
+
+ compound type Plant()
+ 	component Brake B()
+ 	component Throttle T()
+ 	component SpeedSensor S()
+ 	connector intConnector TS(T.set_speed, S.set_speed)
+ 	connector intConnector BS(B.set_speed, S.set_speed)
+ 	export port B.brake as brake
+ 	export port T.throttle as throttle
+ 	export port S.get_speed as get_speed
+ end
+ 
+ compound type Compound ()
+ 	component Environment E()
+ 	component Camera C()
+ 	component Perception P()
+ 	component Controller CT()
+ 	component Plant PT()
+ 	connector intConnector EC(E.send_F, C.get_F)
+ 	connector intConnector CP(C.send_F, P.get_F)
+ 	connector intConnector PCT(P.send_R, CT.get_R)
+ 	connector intConnector GetSpeed(PT.get_speed, CT.get_speed)
+ 	connector intConnector throttle(CT.throttle, PT.throttle)
+ 	connector intConnector brake(CT.brake, PT.brake)
+ end
+ 
+end
