@@ -26,7 +26,7 @@ git clone https://gricad-gitlab.univ-grenoble-alpes.fr/verimag/bip/compiler.git
 cd compiler/distribution
 ./single-archive-dist.sh
 ```
-The compilation will then build an archive in the './build/' directory with the name like 'bip-full <version> .tar.gz' (where '<version-name>' is a version name automatically generated). How to use such an archive is described [here](http://www-verimag.imag.fr/New-BIP-tools.html?lang=en)
+The compilation will then build an archive in the `./build/` directory with the name like `bip-full <version-name> .tar.gz` (where `<version-name>` is a version name automatically generated). How to use such an archive is described [here](http://www-verimag.imag.fr/New-BIP-tools.html?lang=en)
 
 
 
