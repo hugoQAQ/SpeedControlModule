@@ -13,20 +13,20 @@ wget https://download.pytorch.org/libtorch/lts/1.8/cpu/libtorch-cxx11-abi-shared
 unzip libtorch-cxx11-abi-shared-with-deps-1.8.2%2Bcpu.zip
 ```
 ## 3. BIP
-0. Installing required dependencies for BIP compiler and BIP engines
+### 0. Installing dependencies for BIP
 ```bash
 sudo apt-get install ant cmake g++ default-jre default-jdk
 ```
-1. Getting BIP source code
+### 1. Getting BIP source code
 ```bash
 git clone https://gricad-gitlab.univ-grenoble-alpes.fr/verimag/bip/compiler.git
 ```
-2. Compiling source code
+### 2. Compiling source code
 ```bash
 cd compiler/distribution
 ./single-archive-dist.sh
 ```
-The compilation will then build an archive in the `./build/` directory with the name like `bip-full <version-name> .tar.gz` (where `<version-name>` is a version name automatically generated). How to use such an archive is described [here](http://www-verimag.imag.fr/New-BIP-tools.html?lang=en)
+The compilation will then build an archive in the `./build/` directory with the name like `bip-full <version-name> .tar.gz` (where `<version-name>` is a version name automatically generated). How to use such an archive is described [here](http://www-verimag.imag.fr/New-BIP-tools.html?lang=en).
 
 
 
