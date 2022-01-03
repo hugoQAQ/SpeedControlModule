@@ -121,13 +121,11 @@ package learn
 		data int deltaSpeed
 		export port intPort getSpeed(speed)
 		export port intPort changeSpeed(deltaSpeed)
-		export port silent tick()
 
 		place Idle
 		initial to Idle
 		on getSpeed from Idle to Idle
 		on changeSpeed from Idle to Idle do { speed = speed + deltaSpeed; }
-		on tick from Idle to Idle
 	end
  
 	compound type Compound ()
