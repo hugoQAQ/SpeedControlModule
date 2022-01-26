@@ -1,0 +1,77 @@
+@cpp(src="ext-cpp/utilities.cpp",include="utilities.hpp")
+package learn
+	extern function int deepLearn(int)
+	extern function int const_getFileNum()
+	extern function int input()
+	extern function printf(string, int)
+	extern function printf(string)
+
+	port type intPort (int d)   
+	port type silent ()
+
+
+	connector type intConnector (intPort p1, intPort p2)
+		define p1  p2
+		on p1 p2 down {p2.d = p1.d;}				
+	end
+
+	connector type singleton (silent p1)
+		define p1
+	end
+ 
+	atom type Perception ()
+		data int inputIndex
+		data int result
+		export port silent getInput()
+		export port intPort sendResult(result)
+		export port silent inference()
+
+		place Idle, Inference, Read
+		initial to Idle
+
+		on getInput from Idle to Inference do {inputIndex = input();} 
+		on inference from Inference to Read do {result = deepLearn(inputIndex);}
+		on sendResult from Read to Idle
+	end
+ 
+	atom type Controller ()
+		data int speed = 70
+		data int speedLimit
+		data int deltaSpeed
+		data int zero = 0
+		export port intPort getSpeedLimit(speedLimit)
+		export port silent getSpeed()
+		export port silent brake()
+		export port silent throttle()
+		export port silent noSpeedChange()
+
+
+		place Idle, Get, Compare
+		initial to Idle
+		on getSpeedLimit from Idle to Get
+		on getSpeed from Get to Compare
+			do {
+		printf("\n\033[30;47m Current speed: %d km/h\033[0m\n", speed);
+		printf("\033[01;33m Speed limit: %d km/h\033[0m\n", speedLimit); deltaSpeed = speedLimit-speed;}
+		on noSpeedChange from Compare to Idle provided (deltaSpeed==0)
+		on brake from Compare to Idle provided (deltaSpeed<0)
+			do {printf("\033[01;31m Depress brake!\033[0m\n");}
+		on throttle from Compare to Idle provided (deltaSpeed>=0)
+			do {printf("\033[01;32m Depress throttle!\033[0m\n"); }
+	end
+ 
+	compound type Compound ()
+		component Perception perception()
+		component Controller controller()
+
+		connector intConnector getSpeedLimit(perception.sendResult,controller.getSpeedLimit)
+		connector singleton getInput(perception.getInput)
+		connector singleton inference(perception.inference)
+		connector singleton getSpeed(controller.getSpeed)
+		connector singleton brake(controller.brake)
+		connector singleton throttle(controller.throttle)
+		connector singleton noSpeedChange(controller.noSpeedChange)
+	end
+
+ 
+end
