@@ -1,0 +1,102 @@
+@cpp(src="ext-cpp/utilities.cpp,ext-cpp/EthGateway.cxx,ext-cpp/VideoFromFabricGateway.cxx",include="utilities.hpp")
+package learn
+	extern function float deepLearn()
+	extern function int connectToServer()
+	extern function disconnectFromServer()
+	extern function int advanceSimulation()
+	extern function int waitForReset()
+	extern function configureVideo()
+	extern function int sendEthernetPacket(float)
+	extern function float recvEthernetPacket()
+	extern function recvVideoPacket()
+	extern function print_out(float x)
+	extern function printf(string, float)
+	extern function printf(string)
+	port type floatPort (float d)   
+	port type silent ()
+
+
+	connector type floatConnector (floatPort p1, floatPort p2)
+		define p1  p2
+		on p1 p2 down {p2.d = p1.d;}				
+	end
+
+	connector type silentConnector (silent p1, silent p2)
+		define p1 p2
+	end 
+
+	connector type singleton (silent p1)
+		define p1
+	end
+ 
+	atom type Perception ()
+		data float result
+
+		export port silent getImage()
+		export port silent inference()
+		export port silent advance()
+		export port floatPort sendResult(result)
+
+		place Idle, Inference, Read, Wait
+		initial to Idle 
+		do {connectToServer(); waitForReset(); configureVideo();}
+
+		on getImage from Idle to Inference 
+		do {recvVideoPacket();}
+		on inference from Inference to Read do {result = deepLearn();}
+		on sendResult from Read to Wait 
+		on advance from Wait to Idle 
+	end
+ 
+	atom type Controller ()
+		data float speed
+		data float speedLimit
+		data float result
+
+		export port floatPort getResult(result)
+		export port silent getSpeed()
+		export port silent sendDecision()
+		export port silent advance()
+
+		place Idle, Get, Decision, Action
+		initial to Idle
+		on getResult from Idle to Get 
+		do {
+			if ( result!=-1.0 ) then
+				speedLimit = result;
+			fi
+		}
+		on getSpeed from Get to Decision
+		do {
+			speed = recvEthernetPacket(); 
+			printf("\n\033[30;47m Current speed: %f km/h \033[0m\n", speed);
+		}
+		on sendDecision from Decision to Action
+		do {
+			if (speedLimit>speed) then
+				sendEthernetPacket(0.0);
+				printf("\033[01;31m Depress brake!\033[0m\n");
+			else
+				sendEthernetPacket(50.0);
+				printf("\033[01;32m Depress throttle!\033[0m\n"); 
+			fi 
+		}
+		on advance from Action to Idle 
+		do {advanceSimulation();}
+	end
+
+ 
+	compound type Compound ()
+		component Perception perception()
+		component Controller controller()
+
+		connector floatConnector getResult(perception.sendResult,controller.getResult)
+		connector silentConnector advanceSimulation(controller.advance, perception.advance)
+		connector singleton getImage(perception.getImage)
+		connector singleton inference(perception.inference)
+		connector singleton getSpeed(controller.getSpeed)
+		connector singleton sendDecision(controller.sendDecision)
+	end
+
+ 
+end
