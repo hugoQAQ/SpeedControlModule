@@ -1,0 +1,162 @@
+@cpp(src="ext-cpp/utilities.cpp",include="utilities.hpp")
+package learn
+	extern function int deepLearn(int)
+	// extern function int const_getFileNum()
+	extern function printf(string, int)
+	extern function printf(string)
+
+	port type intPort (int d)   
+	port type silent ()
+
+
+	connector type intConnector (intPort p1, intPort p2)
+		define p1  p2
+		on p1 p2 down {p2.d = p1.d;}				
+	end
+
+	connector type rendezVous (intPort p1, intPort p2, silent p3)
+		define p1 p2 p3
+		on p1 p2 p3 down {p2.d = p1.d;}
+	end
+
+	connector type NoDetection (silent p1, silent p2)
+		define p1 p2
+	end 
+
+	connector type singleton (silent p1)
+		define p1
+	end
+ 
+	atom type Environment ()
+		data int inputIndex = 1
+		data int time = 10 
+		export port intPort sendInput(inputIndex)
+		export port silent getInput()
+		export port silent getInputInitial()
+		export port silent noInput()
+
+		place Idle, Read, Stop
+		initial to Idle
+
+		on getInputInitial from Idle to Read provided (inputIndex==1)
+		on getInput from Idle to Read
+		// on sendInput from Read to Idle provided (inputIndex<=const_getFileNum()) do {inputIndex = inputIndex + 1;}
+		on sendInput from Read to Idle do {inputIndex = inputIndex + 1;}
+		// on noInput from Read to Stop provided (inputIndex>const_getFileNum()+1)
+	end
+ 
+	atom type Camera ()
+		data int inputIndex
+		export port intPort capture(inputIndex)
+		export port intPort sendInput(inputIndex)
+
+		place Idle, Read
+		initial to Idle
+
+		on capture from Idle to Read
+		on sendInput from Read to Idle 
+	end
+ 
+	atom type Perception ()
+		data int inputIndex
+		data int result
+		data int result_buffer = 0
+		export port intPort getInput(inputIndex)
+		export port intPort sendResult(result)
+		export port silent noDetection()
+		export port silent inference()
+
+		place Idle, Inference, Read
+		initial to Idle
+
+		on getInput from Idle to Inference
+		on inference from Inference to Read do {result = deepLearn(inputIndex);}
+		on sendResult from Read to Idle provided((result != -1) && (result != result_buffer)) do {printf("\n\033[31;43m New detection \033[0m Speed limit: %d km/h \n",result); result_buffer = result; }
+		on noDetection from Read to Idle provided((result == -1) || (result == result_buffer))
+	end
+ 
+	atom type Controller ()
+		data int speed
+		data int speedLimit
+		data int deltaSpeed
+		data int zero = 0
+		export port intPort getSpeedLimit(speedLimit)
+		export port intPort getSpeed(speed)
+		export port intPort brake(deltaSpeed)
+		export port intPort throttle(deltaSpeed)
+		export port intPort noSpeedChange(zero)
+
+		place Idle, Get, Compare
+		initial to Idle
+		on getSpeedLimit from Idle to Get
+		on getSpeed from Get to Compare
+			do {printf("\n\033[30;47m Current speed: %d km/h \033[0m\n", speed);
+		deltaSpeed = speedLimit-speed;}
+		on noSpeedChange from Compare to Idle provided (deltaSpeed==0)
+		on brake from Compare to Idle provided (deltaSpeed<0)
+			do {printf("\033[01;31m Depress brake!\033[0m\n");}
+		on throttle from Compare to Idle provided (deltaSpeed>=0)
+			do {printf("\033[01;32m Depress throttle!\033[0m\n"); }
+	end
+
+	atom type Brake ()
+		data int deltaSpeed
+		export port intPort brake(deltaSpeed)
+		export port intPort changeSpeed(deltaSpeed)
+
+		place Idle, Action
+		initial to Idle
+		on brake from Idle to Action
+		on changeSpeed from Action to Idle
+	end
+
+	atom type Throttle ()
+		data int deltaSpeed
+		export port intPort throttle(deltaSpeed)
+		export port intPort changeSpeed(deltaSpeed)
+
+		place Idle, Action
+		initial to Idle
+		on throttle from Idle to Action
+		on changeSpeed from Action to Idle
+	end
+
+	atom type SpeedSensor()
+		data int speed = 100
+		data int deltaSpeed
+		export port intPort getSpeed(speed)
+		export port intPort changeSpeed(deltaSpeed)
+
+		place Idle
+		initial to Idle
+		on getSpeed from Idle to Idle
+		on changeSpeed from Idle to Idle do { speed = speed + deltaSpeed; }
+	end
+ 
+	compound type Compound ()
+		component Environment environment()
+		component Camera camera()
+		component Perception perception()
+		component Controller controller()
+		component Brake brake()
+		component Throttle throttle()
+		component SpeedSensor speedSensor()
+		connector intConnector capture(environment.sendInput, camera.capture)
+		connector intConnector getPerceptionInput(camera.sendInput, perception.getInput)
+		connector intConnector getSpeedLimit(perception.sendResult,controller.getSpeedLimit)
+		connector intConnector getSpeed(speedSensor.getSpeed, controller.getSpeed)
+		connector intConnector throttleCommand(controller.throttle, throttle.throttle)
+		connector intConnector brakeCommand(controller.brake, brake.brake)
+
+		connector rendezVous throttleAction(throttle.changeSpeed, speedSensor.changeSpeed, environment.getInput)
+		connector rendezVous brakeAction(brake.changeSpeed, speedSensor.changeSpeed, environment.getInput)
+		connector rendezVous noSpeedChangeAction(controller.noSpeedChange, speedSensor.changeSpeed, environment.getInput)
+
+		connector NoDetection noDetection(perception.noDetection, environment.getInput)
+		connector singleton inference(perception.inference)
+		connector singleton noInput(environment.noInput)
+		connector singleton getInputInitial(environment.getInputInitial)
+	end
+
+ 
+end
