@@ -1,0 +1,47 @@
+# Download base image ubuntu 18.04
+FROM ubuntu:18.04
+
+# LABEL about the custom image
+LABEL maintainer="hisham_abdelsabour@mentor.com"
+LABEL version="0.1"
+LABEL description="PAVE360 Ubuntu 18.04 (Bionic) - BIP Compiler"
+
+# Disable Prompt During Packages Installation
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Update Ubuntu Software repository
+RUN apt-get update
+
+# Install essentials
+RUN apt-get install -y gnupg2 curl git vim m4 gdb iputils-ping \
+    python3 python3-dev python3-pip
+
+# Build Protobuf libraries and install its compiler then install onnxruntime
+# We need to build protobuf because the installation of onnxruntime 
+# fails with the default protobuf installation from apt, since it needs 
+# protobuf to be built with the -fPIC flag
+RUN apt-get install -y protobuf-compiler autoconf automake libtool unzip cmake
+
+WORKDIR /root/protobuf-dev
+
+RUN git clone https://github.com/protocolbuffers/protobuf.git . \
+    && git submodule update --init --recursive && ./autogen.sh && \
+    ./configure --prefix=/usr CXXFLAGS=-fPIC CFLAGS=-fPIC --with-pic \
+    && make -j8 && make install && pip3 install onnxruntime
+
+# Install Open CV
+RUN apt-get install -y libopencv-dev python3-opencv 
+
+# Clone and build the BIP compiler:
+WORKDIR /root/bipCompiler
+
+RUN apt-get install -y ant && \
+    git clone https://gricad-gitlab.univ-grenoble-alpes.fr/verimag/bip/compiler.git .
+
+WORKDIR distribution
+
+RUN ./single-archive-dist.sh -r && cp -a build/bip-full /root/bip-compiler
+
+# Cleanup
+WORKDIR /root
+RUN rm -rf bipCompiler protobuf-dev .cache/pip
