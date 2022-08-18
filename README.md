@@ -22,5 +22,4 @@ The compilation will then build an archive in the `./build/` directory with the 
 cd model
 source compile_run_bip.sh -c learn Compound
 ./system -s
-https://mst.mentor.com/download_public.html?token=m6dK2yE%2FQzUHRfmEG1nfXu675gQzE7t2cPa%2BvavUwLNvJtmThOh4pYnbBy0r%2BduALVwqNJV9MY6c%0D%0Als4EZpqOidyZZdSUopjCGQxoEi7DhuTrzNhHKFabcw2vWo3LnoMAg5d%2FeRju3q0lbut1lJQb4AFw%0D%0ABjzrlHySJSySKRMQt3WwLdOCp4ayR7f%2BkICU8ShF
 ```
